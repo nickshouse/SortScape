@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .bar {
+            display: inline-block;
+            background-color: blue;
+            width: 5px;
+            border: 1px solid black;
+        }
+        .highlight {
+            background-color: red;
+        }
+    </style>
+</head>
+<body>
+    <button onclick="startSorting()">Start Sorting</button>
+    <div id="container"></div>
+    <script>
+        let array = [];
+        let container = document.getElementById("container");
+        let context = new AudioContext();
+        let oscillator = context.createOscillator();
+        oscillator.connect(context.destination);
+        let gainNode = context.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(context.destination);
+        gainNode.gain.value = 0;
+
+        for (let i = 1; i <= 200; i++) {
+            array.push(i);
+        }
+
+        array.sort(() => Math.random() - 0.5);
+
+        function draw() {
+            container.innerHTML = '';
+            for (let i = 0; i < array.length; i++) {
+                let bar = document.createElement("div");
+                bar.classList.add("bar");
+                bar.style.height = array[i] + "px";
+                container.appendChild(bar);
+            }
+        }
+
+        function beep(freq) {
+            return new Promise(resolve => {
+                gainNode.gain.linearRampToValueAtTime(1, context.currentTime + 0.05);
+                oscillator.frequency.value = 500 + freq;
+                setTimeout(() => {
+                    gainNode.gain.linearRampToValueAtTime(0, context.currentTime + 0.05);
+                    resolve();
+                }, 10);
+            });
+        }
+
+        async function mergeSort(arr, start = 0, end = arr.length - 1) {
+            if (start >= end) {
+                return;
+            }
+
+            const mid = Math.floor((start + end) / 2);
+            await mergeSort(arr, start, mid);
+            await mergeSort(arr, mid + 1, end);
+            await merge(arr, start, mid, end);
+        }
+
+        async function merge(arr, start, mid, end) {
+            let temp = [];
+            let i = start, j = mid + 1;
+
+            while (i <= mid && j <= end) {
+                if (arr[i] < arr[j]) {
+                    temp.push(arr[i]);
+                    await beep(arr[i]);
+                    i++;
+                } else {
+                    temp.push(arr[j]);
+                    await beep(arr[j]);
+                    j++;
+                }
+                await highlight(i, j);
+            }
+
+            while (i <= mid) {
+                temp.push(arr[i]);
+                await beep(arr[i]);
+                i++;
+                await highlight(i, j);
+            }
+
+            while (j <= end) {
+                temp.push(arr[j]);
+                await beep(arr[j]);
+                j++;
+                await highlight(i, j);
+            }
+
+            for (let i = start; i <= end; i++) {
+                arr[i] = temp[i - start];
+                draw(); // Draw after each assignment
+                await new Promise(resolve => setTimeout(resolve, 10)); // Pause to visualize
+            }
+
+            draw();
+        }
+
+        async function startSorting() {
+            oscillator.start();
+            await mergeSort(array);
+            for (let i = 0; i < array.length; i++) {
+                await beep(array[i]);
+                await highlight(i, i);
+            }
+            gainNode.gain.linearRampToValueAtTime(0, context.currentTime + 0.05);
+            setTimeout(() => { oscillator.stop(); }, 50);
+        }
+
+        async function highlight(i, j) {
+            draw();
+            if (i < array.length) {
+                container.children[i].classList.add("highlight");
+            }
+            if (j < array.length) {
+                container.children[j].classList.add("highlight");
+            }
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
+        draw();
+    </script>
+</body>
+</html>
