@@ -94,7 +94,7 @@
 
         function generateArray() {
             array = [];
-            for (let i = 0; i < 100; i++) {
+            for (let i = 0; i < 300; i++) {
                 array.push(Math.floor(Math.random() * 300) + 1);
             }
         }
@@ -117,6 +117,22 @@
 
                 arrayContainer.appendChild(arrayBar);
             }
+        }
+
+        function warmUpAudioContext() {
+            oscillator = audioContext.createOscillator();
+            gainNode = audioContext.createGain();
+
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(0, audioContext.currentTime); // Use a frequency of 0 for silence
+
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
         }
 
         async function sleep(ms) {
@@ -215,25 +231,29 @@
             return result;
         }
 
-        function runAlgorithm() {
-            if (audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-
-            const selectedAlgorithm = document.getElementById('algorithm-select').value;
-            if (selectedAlgorithm === 'bubble') {
-                bubbleSort();
-            } else if (selectedAlgorithm === 'quick') {
-                quickSort(0, array.length - 1);
-            } else if (selectedAlgorithm === 'merge') {
-                mergeSort(array);
-            }
+        async function runAlgorithm() {
+            // Resume audio context asynchronously
+            audioContext.resume().then(() => {
+                const selectedAlgorithm = document.getElementById('algorithm-select').value;
+                if (selectedAlgorithm === 'bubble') {
+                    bubbleSort();
+                } else if (selectedAlgorithm === 'quick') {
+                    quickSort(0, array.length - 1);
+                } else if (selectedAlgorithm === 'merge') {
+                    mergeSort(array);
+                }
+            });
         }
 
         function resetArray() {
             generateArray();
             renderArray();
         }
+
+        // Warm up the audio context on page load
+        window.addEventListener('load', () => {
+            warmUpAudioContext();
+        });
 
         generateArray();
         renderArray();
